@@ -82,7 +82,7 @@ main{padding:18px 24px 60px;max-width:1380px;margin:0 auto}
     <div class="stats">
       <div class="stat"><div class="n" id="sPk">11</div><div class="l">Packages</div></div>
       <div class="stat"><div class="n" id="sScr">302</div><div class="l">Screens</div></div>
-      <div class="stat"><div class="n">6.9M</div><div class="l">DEN traffic / mo</div></div>
+      <div class="stat"><div class="n" id="sAreas">5</div><div class="l">Airport areas</div></div>
     </div>
   </div>
   <div class="controls" id="chips"></div>
@@ -149,6 +149,7 @@ function render(){
   });
   document.getElementById('sPk').textContent=shownPk;
   document.getElementById('sScr').textContent=PKGS.filter(p=>state.areas.has(p.area)).reduce((s,p)=>s+p.screens,0);
+  document.getElementById('sAreas').textContent=new Set(PKGS.filter(p=>state.areas.has(p.area)).map(p=>p.area)).size;
 }
 render();
 </script>

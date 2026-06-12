@@ -872,7 +872,7 @@ const gmap=b=>`https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}
 
 /* map */
 const map=L.map('map',{zoomControl:true}).setView([39.79,-105],10);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:20}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:20}).addTo(map);
 const anchorLayer=L.layerGroup().addTo(map);
 ANCHORS.forEach(a=>{
   const bg=a.k==='RR'?cssv('--rr'):cssv('--anchor');
