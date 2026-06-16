@@ -909,9 +909,29 @@ legend.addTo(map);
 const RED=[[39.849,-104.673],[39.834,-104.742],[39.800,-104.800],[39.784,-104.823],[39.782,-104.862],[39.781,-104.902],[39.780,-104.945],[39.779,-104.978],[39.779,-104.996],[39.770,-104.996],[39.758,-104.994],[39.748,-104.992],[39.7421,-104.9899],[39.738,-104.998],[39.735,-105.025],[39.733,-105.052],[39.725,-105.081],[39.718,-105.110],[39.719,-105.140],[39.722,-105.165],[39.710,-105.186],[39.690,-105.196],[39.675,-105.201],[39.6655,-105.2052]];
 const PURPLE=[[39.849,-104.673],[39.836,-104.701],[39.834,-104.742],[39.816,-104.776],[39.802,-104.802],[39.790,-104.823],[39.789,-104.862],[39.788,-104.902],[39.787,-104.942],[39.786,-104.978],[39.788,-104.998],[39.793,-105.016],[39.791,-105.052],[39.790,-105.088],[39.788,-105.111],[39.784,-105.141],[39.762,-105.166],[39.732,-105.181],[39.710,-105.191],[39.690,-105.196],[39.675,-105.201],[39.6655,-105.2052]];
 const routeLayer=L.layerGroup();
-[RED,PURPLE].forEach(c=>L.polyline(c,{color:'#fff',weight:8,opacity:.55,lineCap:'round',lineJoin:'round',interactive:false}).addTo(routeLayer));
-L.polyline(RED,{color:'#e5484d',weight:4.5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(routeLayer);
-L.polyline(PURPLE,{color:'#7c3aed',weight:4.5,opacity:.95,dashArray:'1,0',lineCap:'round',lineJoin:'round',interactive:false}).addTo(routeLayer);
+function drawRoutes(red,purple){
+  routeLayer.clearLayers();
+  [red,purple].forEach(c=>L.polyline(c,{color:'#fff',weight:8,opacity:.55,lineCap:'round',lineJoin:'round',interactive:false}).addTo(routeLayer));
+  L.polyline(red,{color:'#e5484d',weight:4.5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(routeLayer);
+  L.polyline(purple,{color:'#7c3aed',weight:4.5,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}).addTo(routeLayer);
+}
+drawRoutes(RED,PURPLE); // immediate traced fallback
+// Upgrade to real on-road geometry so the lines snap to the actual freeways.
+// Falls back silently to the traced lines if the routing service is unreachable.
+(function(){
+  var base='https://router.project-osrm.org/route/v1/driving/';
+  var q='?overview=full&geometries=geojson';
+  function get(u){return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
+    if(!j.routes||!j.routes[0]||!j.routes[0].geometry)throw 0;
+    return j.routes[0].geometry.coordinates.map(function(p){return [p[1],p[0]];});
+  });}
+  Promise.all([
+    get(base+'-104.6764,39.8563;-104.9899,39.7421;-105.2052,39.6655'+q),
+    get(base+'-104.6764,39.8563;-105.0500,39.7855;-105.2052,39.6655'+q)
+  ]).then(function(res){
+    if(res[0]&&res[1]&&res[0].length>2&&res[1].length>2)drawRoutes(res[0],res[1]);
+  }).catch(function(){});
+})();
 
 function popHTML(b){
   const img=b.photo?`<img class="img" src="${b.photo}" alt="">`:`<div class="img empty">Photo not provided in inventory list</div>`;
