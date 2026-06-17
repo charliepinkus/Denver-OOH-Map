@@ -1063,6 +1063,16 @@ document.getElementById('vTable').onclick=()=>switchView('table');
 
 render();
 map.fitBounds(L.featureGroup(Object.values(markers)).getBounds().pad(.12));
+// deep-link: index.html#b=<id> focuses a specific board (used by the proposal page)
+function focusFromHash(){
+  var m=(location.hash||'').match(/b=([^&]+)/);
+  if(!m)return;
+  var id=decodeURIComponent(m[1]);
+  var b=BOARDS.find(function(x){return x.id===id;});
+  if(b){ if(state.shown[b.v]===false){state.shown[b.v]=true;render();} goTo(b); }
+}
+window.addEventListener('hashchange',focusFromHash);
+setTimeout(focusFromHash,300);
 </script>
 </body>
 </html>
