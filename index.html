@@ -871,7 +871,7 @@ const RR=aBy('RR'),DT=aBy('DT'),DEN=aBy('DEN');
 const d2=(b,a)=>miles(b.lat,b.lng,a.lat,a.lng).toFixed(1);
 BOARDS.forEach((b,i)=>{b._n=i+1;b._rr=+d2(b,RR);b._dt=+d2(b,DT);b._den=+d2(b,DEN);});
 
-const state={shown:{OUTFRONT:1,LAMAR:1,TBD:1,RMO:1,SUN:1,ANC:1,ROUTES:1},media:'all',view:'map',sort:'imp',dir:-1};
+const state={shown:{OUTFRONT:1,LAMAR:1,TBD:1,RMO:1,SUN:1,ANC:1,ROUTES:1},media:'all',view:'map',sort:'_rr',dir:1};
 const gmap=b=>`https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`;
 
 /* map */
