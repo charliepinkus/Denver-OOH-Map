@@ -692,6 +692,9 @@ h1{font:800 19px/1.05 Archivo,sans-serif;letter-spacing:-.01em;margin:0;white-sp
 .chip{font:600 11.5px/1 Inter;cursor:pointer;user-select:none;border:1px solid var(--line);background:var(--ink2);color:var(--muted);padding:7px 11px 7px 9px;border-radius:20px;display:flex;align-items:center;gap:7px;transition:.16s}
 .chip:hover{border-color:var(--line2);color:var(--paper)}
 .chip .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.pin.rec{box-shadow:0 0 0 2px #fff,0 0 0 4px #16a34a,0 0 10px 2px rgba(22,163,74,.55);z-index:1000!important}
+
+.recbadge{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#16a34a;color:#fff;font-weight:700;font-size:11px;letter-spacing:.02em;vertical-align:middle}
 .chip[aria-pressed="false"]{opacity:.36;text-decoration:line-through}
 .chip.of .dot{background:var(--of)}.chip.lamar .dot{background:var(--lamar)}.chip.tbd .dot{background:var(--tbd)}.chip.obm .dot{background:var(--obm)}.chip.dash2 .dot{background:var(--dash2)}.chip.blue .dot{background:var(--blue)}.chip.anc .dot{background:var(--anchor)}
 .chip.rt .dot{background:linear-gradient(90deg,#e5484d 50%,#7c3aed 50%)}
@@ -873,6 +876,43 @@ const RR=aBy('RR'),DT=aBy('DT'),DEN=aBy('DEN');
 const d2=(b,a)=>miles(b.lat,b.lng,a.lat,a.lng).toFixed(1);
 BOARDS.forEach((b,i)=>{b._n=i+1;b._rr=+d2(b,RR);b._dt=+d2(b,DT);b._den=+d2(b,DEN);});
 
+/* spiderfy: fan out boards that share a near-identical spot so each pin is visible and clickable */
+(function(){
+  const used=new Set(), groups=[];
+  for(let a=0;a<BOARDS.length;a++){
+    if(used.has(a))continue;
+    const g=[a]; used.add(a);
+    for(let b=a+1;b<BOARDS.length;b++){
+      if(used.has(b))continue;
+      const dmi=Math.hypot(BOARDS[a].lat-BOARDS[b].lat,BOARDS[a].lng-BOARDS[b].lng)*69;
+      if(dmi<0.06){g.push(b);used.add(b);}
+    }
+    groups.push(g);
+  }
+  BOARDS.forEach(b=>{b._dlat=b.lat;b._dlng=b.lng;b._spider=false;});
+  groups.forEach(g=>{
+    if(g.length<2)return;
+    // centroid
+    let clat=0,clng=0; g.forEach(i=>{clat+=BOARDS[i].lat;clng+=BOARDS[i].lng;});
+    clat/=g.length; clng/=g.length;
+    const R=0.00055; // ~40m display ring
+    const lngScale=1/Math.cos(clat*Math.PI/180);
+    g.forEach((idx,k)=>{
+      const ang=(2*Math.PI*k/g.length)-Math.PI/2;
+      BOARDS[idx]._dlat=clat+R*Math.sin(ang);
+      BOARDS[idx]._dlng=clng+R*Math.cos(ang)*lngScale;
+      BOARDS[idx]._spider=true;
+      BOARDS[idx]._truelat=clat;
+      BOARDS[idx]._truelng=clng;
+    });
+  });
+})();
+
+/* recommended buy: the three must-have boards in the proposal */
+const REC={'3184A':1,'3195A':1,'DEN-DG-513':1};
+BOARDS.forEach(b=>{b._rec=!!REC[b.id];});
+
+
 const state={shown:{OUTFRONT:1,LAMAR:1,TBD:1,OBM:1,DASH2:1,BLUELINE:1,SUN:1,ANC:1,ROUTES:1},media:'all',view:'map',sort:'_rr',dir:1};
 const gmap=b=>`https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`;
 
@@ -887,11 +927,15 @@ ANCHORS.forEach(a=>{
 });
 const markers={};
 const boardLayer=L.layerGroup().addTo(map);
+const spiderLegs={};
 BOARDS.forEach(b=>{
-  const m=L.marker([b.lat,b.lng],{icon:L.divIcon({className:'',html:`<div class="pin" data-id="${b.id}" style="background:${COL[b.v]}"><span>${b._n}</span></div>`,iconSize:[26,26],iconAnchor:[13,24],popupAnchor:[0,-22]})});
+  const m=L.marker([b._dlat,b._dlng],{icon:L.divIcon({className:'',html:`<div class="pin${b._rec?' rec':''}" data-id="${b.id}" style="background:${COL[b.v]}"><span>${b._n}</span></div>`,iconSize:[26,26],iconAnchor:[13,24],popupAnchor:[0,-22]})});
   m.bindPopup(popHTML(b),{maxWidth:300});
   m.on('popupopen',()=>setActive(b.id,true));
   markers[b.id]=m;
+  if(b._spider){
+    spiderLegs[b.id]=L.polyline([[b._truelat,b._truelng],[b._dlat,b._dlng]],{color:COL[b.v],weight:1.2,opacity:.45,interactive:false});
+  }
 });
 /* legend */
 const legend=L.control({position:'bottomleft'});
@@ -942,7 +986,7 @@ function popHTML(b){
   const img=b.photo?`<img class="img" src="${b.photo}" alt="">`:`<div class="img empty">Photo not provided in inventory list</div>`;
   const alt=b.alt?`<small>${b.alt}</small>`:'';
   return `<div class="pop">${img}<div class="pad">
-    <span class="vbadge" style="background:${COL[b.v]}">${VNAME[b.v]}</span>
+    <span class="vbadge" style="background:${COL[b.v]}">${VNAME[b.v]}</span>${b._rec?'<span class="recbadge">★ Recommended buy</span>':''}
     <h3>${b.loc}</h3><div class="area">${b.zone} · #${b.id}</div>
     <div class="grid">
       <div class="kv"><div class="k">Rate</div><div class="v">${usd(b.price)} <small>/ ${b.per}</small><br>${alt}</div></div>
@@ -1040,7 +1084,7 @@ function renderTable(vis){
 
 function render(){
   const vis=BOARDS.filter(passes);
-  BOARDS.forEach(b=>{passes(b)?boardLayer.addLayer(markers[b.id]):boardLayer.removeLayer(markers[b.id]);});
+  BOARDS.forEach(b=>{if(passes(b)){boardLayer.addLayer(markers[b.id]);if(spiderLegs[b.id])boardLayer.addLayer(spiderLegs[b.id]);}else{boardLayer.removeLayer(markers[b.id]);if(spiderLegs[b.id])boardLayer.removeLayer(spiderLegs[b.id]);}});
   state.shown.ANC?map.addLayer(anchorLayer):map.removeLayer(anchorLayer);
   state.shown.ROUTES?map.addLayer(routeLayer):map.removeLayer(routeLayer);
   renderList(vis);renderTable(vis);
